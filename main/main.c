@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <esp_err.h>
 #include "ulp_riscv.h"
+#include "ulp_riscv_i2c.h"
 
 #include "driver/gpio.h"
 #include "driver/uart.h"
@@ -55,13 +56,28 @@ void serialMonitor()
         // Read data from the UART
         int len = uart_read_bytes(UART_PORT, data, (BUF_SIZE - 1), 20 / portTICK_PERIOD_MS);
         // Write data back to the UART
+        data[len] = 0x0;
         if (len)
-            printf("ULP: %s", data);
+            printf("%s", data);
     }
 }
 
 void app_main(void)
-{
+{   
+    ulp_riscv_i2c_cfg_t i2c_cfg = {
+        ULP_RISCV_I2C_DEFAULT_GPIO_CONFIG()
+        ULP_RISCV_I2C_FAST_MODE_CONFIG()  
+        //ULP_RISCV_I2C_STANDARD_MODE_CONFIG()
+    };
+    i2c_cfg.i2c_pin_cfg.sda_io_num = GPIO_NUM_3;
+    i2c_cfg.i2c_pin_cfg.scl_io_num = GPIO_NUM_0;
+
+    esp_err_t ret = ulp_riscv_i2c_master_init(&i2c_cfg);
+    if (ret!= ESP_OK) {
+        printf("ERROR: Failed to initialize RTC I2C. Aborting...\n");
+        abort();
+    }
+
     init_ulp_program();
     serialMonitor();
 }
